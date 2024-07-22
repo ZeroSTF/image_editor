@@ -1,0 +1,140 @@
+<!-- image-editor.component.html -->
+<mat-toolbar color="primary">
+    <span>Image Editor</span>
+  </mat-toolbar>
+  
+  <div class="image-editor-container">
+    <mat-drawer-container class="editor-content">
+      <mat-drawer mode="side" opened>
+        <mat-nav-list>
+          <h3 matSubheader>Layers</h3>
+          <mat-list-item *ngFor="let layer of layers" (click)="selectLayer(layer)" [class.selected]="layer === selectedLayer">
+            <mat-icon matListIcon>{{ layer.type === 'image' ? 'image' : 'text_fields' }}</mat-icon>
+            <span matLine>{{ layer.type === 'image' ? 'Image' : 'Text' }} Layer</span>
+          </mat-list-item>
+        </mat-nav-list>
+      </mat-drawer>
+      
+      <mat-drawer-content  (click)="onClick($event)">
+        <div class="canvas-container">
+          <canvas #canvas 
+                  [width]="canvasWidth" 
+                  [height]="canvasHeight"
+                  (mousedown)="onMouseDown($event)"
+                  (mousemove)="onMouseMove($event)"
+                  (mouseup)="onMouseUp()"
+                  (wheel)="onWheel($event)"
+                  (click)="onClick($event)"></canvas>
+          <mat-spinner *ngIf="isLoading" diameter="50"></mat-spinner>
+          <!-- <button mat-icon-button matTooltip="Hold Ctrl and use mouse wheel or +/- keys to resize" aria-label="Resize help">
+            <mat-icon>help</mat-icon>
+          </button> -->
+        </div>
+        
+        <div class="toolbar">
+          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" multiple>
+          <button mat-raised-button color="primary" (click)="fileInput.click()">
+            <mat-icon>add_photo_alternate</mat-icon>
+            Add Image
+          </button>
+          <button mat-raised-button color="primary" (click)="addTextLayer()">
+            <mat-icon>text_fields</mat-icon>
+            Add Text
+          </button>
+          <button mat-raised-button color="warn" (click)="removeBackground()" [disabled]="!selectedLayer || selectedLayer.type !== 'image'">
+            <mat-icon>content_cut</mat-icon>
+            Remove Background
+          </button>
+          <button mat-raised-button (click)="undo()" [disabled]="undoStack.length === 0">
+            <mat-icon>undo</mat-icon>
+            Undo
+          </button>
+          <button mat-raised-button (click)="redo()" [disabled]="redoStack.length === 0">
+            <mat-icon>redo</mat-icon>
+            Redo
+          </button>
+          <button mat-raised-button color="accent" (click)="export('png')">
+            <mat-icon>save_alt</mat-icon>
+            Export PNG
+          </button>
+          <button mat-raised-button color="accent" (click)="export('jpeg')">
+            <mat-icon>save_alt</mat-icon>
+            Export JPEG
+          </button>
+        </div>
+  
+        <mat-accordion>
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Canvas Presets</mat-panel-title>
+              </mat-expansion-panel-header>
+              <mat-tab-group>
+                <mat-tab label="Facebook">
+                  <mat-nav-list>
+                    <mat-list-item *ngFor="let preset of canvasPresets['facebook']" (click)="setCanvasSize(preset)">
+                      {{ preset.name }} ({{ preset.width }}x{{ preset.height }})
+                    </mat-list-item>
+                  </mat-nav-list>
+                </mat-tab>
+                <mat-tab label="Instagram">
+                  <mat-nav-list>
+                    <mat-list-item *ngFor="let preset of canvasPresets['instagram']" (click)="setCanvasSize(preset)">
+                      {{ preset.name }} ({{ preset.width }}x{{ preset.height }})
+                    </mat-list-item>
+                  </mat-nav-list>
+                </mat-tab>
+              </mat-tab-group>
+            </mat-expansion-panel>
+          </mat-accordion>
+  
+        <div *ngIf="selectedLayer" class="layer-controls"  (click)="$event.stopPropagation()">
+          <h3>Layer Properties</h3>
+          <mat-form-field>
+            <mat-label>X</mat-label>
+            <input matInput type="number" [(ngModel)]="selectedLayer.x" (ngModelChange)="redraw()">
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Y</mat-label>
+            <input matInput type="number" [(ngModel)]="selectedLayer.y" (ngModelChange)="redraw()">
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Width</mat-label>
+            <input matInput type="number" [(ngModel)]="selectedLayer.width" (ngModelChange)="redraw()">
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Height</mat-label>
+            <input matInput type="number" [(ngModel)]="selectedLayer.height" (ngModelChange)="redraw()">
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Rotation (degrees)</mat-label>
+            <input matInput type="number" [(ngModel)]="selectedLayer.rotation" (ngModelChange)="redraw()">
+          </mat-form-field>
+          
+          <ng-container *ngIf="selectedLayer.type === 'text'">
+            <mat-form-field>
+              <mat-label>Text</mat-label>
+              <input matInput [(ngModel)]="selectedLayer.content" (ngModelChange)="redraw()">
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Font Size</mat-label>
+              <input matInput type="number" [(ngModel)]="selectedLayer.fontSize" (ngModelChange)="redraw()">
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Font Family</mat-label>
+              <input matInput [(ngModel)]="selectedLayer.fontFamily" (ngModelChange)="redraw()">
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>Color</mat-label>
+              <input matInput type="color" [(ngModel)]="selectedLayer.color" (ngModelChange)="redraw()">
+            </mat-form-field>
+          </ng-container>
+  
+          <div class="layer-actions">
+            <button mat-raised-button (click)="moveLayer('up')">Move Up</button>
+            <button mat-raised-button (click)="moveLayer('down')">Move Down</button>
+            <button mat-raised-button color="warn" (click)="deleteLayer()">Delete Layer</button>
+          </div>
+        </div>
+      </mat-drawer-content>
+    </mat-drawer-container>
+  </div>
