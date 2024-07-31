@@ -1,80 +1,85 @@
 <div class="image-editor-container">
-    <mat-toolbar color="primary">
-      <span>Image Editor</span>
-      <span class="spacer"></span>
-      <button mat-icon-button (click)="toggleLayersPanel()" matTooltip="Toggle Layers">
-        <mat-icon>layers</mat-icon>
-      </button>
-      <button mat-icon-button (click)="togglePropertiesPanel()" matTooltip="Toggle Properties">
-        <mat-icon>settings</mat-icon>
-      </button>
-    </mat-toolbar>
-  
-    <mat-sidenav-container class="editor-content">
-      <mat-sidenav #layersSidenav mode="side" position="start">
-        <mat-nav-list>
-          <h3 matSubheader>Layers</h3>
-          <mat-list-item *ngFor="let layer of layers" (click)="selectLayer(layer)" [class.selected]="layer === selectedLayer">
-            <mat-icon matListIcon>{{ layer.type === 'image' ? 'image' : 'text_fields' }}</mat-icon>
-            <span matLine>{{ layer.type === 'image' ? 'Image' : 'Text' }} Layer</span>
-          </mat-list-item>
-        </mat-nav-list>
-      </mat-sidenav>
-  
-      <mat-sidenav #propertiesSidenav mode="side" position="end">
-        <div *ngIf="selectedLayer" class="layer-properties">
-          <h3>Layer Properties</h3>
-          <mat-form-field>
-            <mat-label>X</mat-label>
-            <input matInput type="number" [(ngModel)]="selectedLayer.x" (ngModelChange)="redraw()">
+  <mat-toolbar color="primary">
+    <span>Advanced Image Editor</span>
+    <span class="spacer"></span>
+    <button mat-icon-button (click)="toggleLayersPanel()" matTooltip="Toggle Layers">
+      <mat-icon>layers</mat-icon>
+    </button>
+    <button mat-icon-button (click)="togglePropertiesPanel()" matTooltip="Toggle Properties">
+      <mat-icon>settings</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <mat-sidenav-container class="editor-content">
+    <mat-sidenav #layersSidenav mode="side" position="start" class="sidenav">
+      <mat-nav-list>
+        <h3 matSubheader>Layers</h3>
+        <mat-list-item *ngFor="let layer of layers; let i = index" (click)="selectLayer(layer)" [class.selected]="layer === selectedLayer">
+          <mat-icon matListIcon>{{ layer.type === 'image' ? 'image' : 'text_fields' }}</mat-icon>
+          <span matLine>{{ layer.type === 'image' ? 'Image' : 'Text' }} Layer {{ i + 1 }}</span>
+        </mat-list-item>
+      </mat-nav-list>
+    </mat-sidenav>
+
+    <mat-sidenav #propertiesSidenav mode="side" position="end" class="sidenav">
+      <div *ngIf="selectedLayer" class="layer-properties">
+        <h3>Layer Properties</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>X</mat-label>
+          <input matInput type="number" [(ngModel)]="selectedLayer.x" (ngModelChange)="redraw()">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Y</mat-label>
+          <input matInput type="number" [(ngModel)]="selectedLayer.y" (ngModelChange)="redraw()">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Width</mat-label>
+          <input matInput type="number" [(ngModel)]="selectedLayer.width" (ngModelChange)="redraw()">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Height</mat-label>
+          <input matInput type="number" [(ngModel)]="selectedLayer.height" (ngModelChange)="redraw()">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Rotation (degrees)</mat-label>
+          <input matInput type="number" [(ngModel)]="selectedLayer.rotation" (ngModelChange)="redraw()">
+        </mat-form-field>
+        
+        <ng-container *ngIf="selectedLayer.type === 'text'">
+          <mat-form-field appearance="outline">
+            <mat-label>Text</mat-label>
+            <textarea matInput [(ngModel)]="selectedLayer.content" (ngModelChange)="redraw()"></textarea>
           </mat-form-field>
-          <mat-form-field>
-            <mat-label>Y</mat-label>
-            <input matInput type="number" [(ngModel)]="selectedLayer.y" (ngModelChange)="redraw()">
+          <mat-form-field appearance="outline">
+            <mat-label>Font Size</mat-label>
+            <input matInput type="number" [(ngModel)]="selectedLayer.fontSize" (ngModelChange)="redraw()">
           </mat-form-field>
-          <mat-form-field>
-            <mat-label>Width</mat-label>
-            <input matInput type="number" [(ngModel)]="selectedLayer.width" (ngModelChange)="redraw()">
+          <mat-form-field appearance="outline">
+            <mat-label>Font Family</mat-label>
+            <mat-select [(ngModel)]="selectedLayer.fontFamily" (ngModelChange)="redraw()">
+              <mat-option value="Arial">Arial</mat-option>
+              <mat-option value="Verdana">Verdana</mat-option>
+              <mat-option value="Times New Roman">Times New Roman</mat-option>
+              <mat-option value="Courier New">Courier New</mat-option>
+            </mat-select>
           </mat-form-field>
-          <mat-form-field>
-            <mat-label>Height</mat-label>
-            <input matInput type="number" [(ngModel)]="selectedLayer.height" (ngModelChange)="redraw()">
+          <mat-form-field appearance="outline">
+            <mat-label>Color</mat-label>
+            <input matInput type="color" [(ngModel)]="selectedLayer.color" (ngModelChange)="redraw()">
           </mat-form-field>
-          <mat-form-field>
-            <mat-label>Rotation (degrees)</mat-label>
-            <input matInput type="number" [(ngModel)]="selectedLayer.rotation" (ngModelChange)="redraw()">
-          </mat-form-field>
-          
-          <ng-container *ngIf="selectedLayer.type === 'text'">
-            <mat-form-field>
-              <mat-label>Text</mat-label>
-              <input matInput [(ngModel)]="selectedLayer.content" (ngModelChange)="redraw()">
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Font Size</mat-label>
-              <input matInput type="number" [(ngModel)]="selectedLayer.fontSize" (ngModelChange)="redraw()">
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Font Family</mat-label>
-              <input matInput [(ngModel)]="selectedLayer.fontFamily" (ngModelChange)="redraw()">
-            </mat-form-field>
-            <mat-form-field>
-              <mat-label>Color</mat-label>
-              <input matInput type="color" [(ngModel)]="selectedLayer.color" (ngModelChange)="redraw()">
-            </mat-form-field>
-          </ng-container>
-  
-          <div class="layer-actions">
-            <button mat-raised-button (click)="moveLayer('up')">Move Up</button>
-            <button mat-raised-button (click)="moveLayer('down')">Move Down</button>
-            <button mat-raised-button color="warn" (click)="deleteLayer()">Delete Layer</button>
-          </div>
+        </ng-container>
+
+        <div class="layer-actions">
+          <button mat-raised-button color="primary" (click)="moveLayer('up')">Move Up</button>
+          <button mat-raised-button color="primary" (click)="moveLayer('down')">Move Down</button>
+          <button mat-raised-button color="warn" (click)="deleteLayer()">Delete Layer</button>
         </div>
-      </mat-sidenav>
-  
-      <mat-sidenav-content>
-        <div class="canvas-container">
-            <div class="canvas-wrapper">
+      </div>
+    </mat-sidenav>
+
+    <mat-sidenav-content>
+      <div class="canvas-container">
+        <div class="canvas-wrapper">
           <canvas #canvas 
                   [width]="canvasWidth" 
                   [height]="canvasHeight"
@@ -83,38 +88,38 @@
                   (mouseup)="onMouseUp()"
                   (wheel)="onWheel($event)"
                   (click)="onClick($event)"></canvas>
-                </div>
-          <mat-spinner *ngIf="isLoading" diameter="50"></mat-spinner>
         </div>
-  
-        <div class="floating-toolbar">
-          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" multiple>
-          <button mat-mini-fab color="primary" (click)="fileInput.click()" matTooltip="Add Image">
-            <mat-icon>add_photo_alternate</mat-icon>
-          </button>
-          <button mat-mini-fab color="primary" (click)="addTextLayer()" matTooltip="Add Text">
-            <mat-icon>text_fields</mat-icon>
-          </button>
-          <button mat-mini-fab color="warn" (click)="removeBackground()" [disabled]="!selectedLayer || selectedLayer.type !== 'image'" matTooltip="Remove Background">
-            <mat-icon>content_cut</mat-icon>
-          </button>
-          <button mat-mini-fab (click)="undo()" [disabled]="undoStack.length === 0" matTooltip="Undo">
-            <mat-icon>undo</mat-icon>
-          </button>
-          <button mat-mini-fab (click)="redo()" [disabled]="redoStack.length === 0" matTooltip="Redo">
-            <mat-icon>redo</mat-icon>
-          </button>
-          <button mat-mini-fab color="accent" (click)="export('png')" matTooltip="Export PNG">
-            <mat-icon>save_alt</mat-icon>
-          </button>
-          <button mat-mini-fab color="accent" (click)="export('jpeg')" matTooltip="Export JPEG">
-            <mat-icon>save_alt</mat-icon>
-          </button>
-        </div>
-  
-        <button mat-fab class="preset-fab" (click)="openPresetsDialog()" matTooltip="Canvas Presets">
-          <mat-icon>aspect_ratio</mat-icon>
+        <mat-progress-spinner *ngIf="isLoading" mode="indeterminate" diameter="50"></mat-progress-spinner>
+      </div>
+
+      <div class="floating-toolbar">
+        <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" multiple accept="image/*">
+        <button mat-mini-fab color="primary" (click)="fileInput.click()" matTooltip="Add Image">
+          <mat-icon>add_photo_alternate</mat-icon>
         </button>
-      </mat-sidenav-content>
-    </mat-sidenav-container>
-  </div>
+        <button mat-mini-fab color="primary" (click)="addTextLayer()" matTooltip="Add Text">
+          <mat-icon>text_fields</mat-icon>
+        </button>
+        <button mat-mini-fab color="warn" (click)="removeBackground()" [disabled]="!selectedLayer || selectedLayer.type !== 'image'" matTooltip="Remove Background">
+          <mat-icon>content_cut</mat-icon>
+        </button>
+        <button mat-mini-fab (click)="undo()" [disabled]="undoStack.length === 0" matTooltip="Undo">
+          <mat-icon>undo</mat-icon>
+        </button>
+        <button mat-mini-fab (click)="redo()" [disabled]="redoStack.length === 0" matTooltip="Redo">
+          <mat-icon>redo</mat-icon>
+        </button>
+        <button mat-mini-fab color="accent" (click)="export('png')" matTooltip="Export PNG">
+          <mat-icon>save_alt</mat-icon>
+        </button>
+        <button mat-mini-fab color="accent" (click)="export('jpeg')" matTooltip="Export JPEG">
+          <mat-icon>save_alt</mat-icon>
+        </button>
+      </div>
+
+      <button mat-fab class="preset-fab" (click)="openPresetsDialog()" matTooltip="Canvas Presets">
+        <mat-icon>aspect_ratio</mat-icon>
+      </button>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

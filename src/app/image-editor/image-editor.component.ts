@@ -1,23 +1,18 @@
-import { Component, OnInit, ViewChild, ElementRef, HostListener  } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { Layer } from './layer.model';
-import { FormsModule } from '@angular/forms';
-import { BrowserModule } from '@angular/platform-browser';
-import { CommonModule } from '@angular/common';
 import { RemoveBgService } from './remove-bg.service';
-import { HttpClientModule } from '@angular/common/http';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
+import { CanvasPresetsDialogComponent } from '../canvas-presets/canvas-presets.component';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
-import { MatSliderModule } from '@angular/material/slider';
+import { MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatAccordion, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle } from '@angular/material/expansion';
-import { MatTab, MatTabGroup } from '@angular/material/tabs';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { CanvasPresetsDialogComponent } from '../canvas-presets/canvas-presets.component';
-
 
 @Component({
   selector: 'app-image-editor',
@@ -25,25 +20,18 @@ import { CanvasPresetsDialogComponent } from '../canvas-presets/canvas-presets.c
   styleUrls: ['./image-editor.component.css'],
   standalone: true,
   imports: [
-    FormsModule, 
-    CommonModule, 
-    HttpClientModule, 
+    // Include all necessary Material imports here
+    // For example:
     MatButtonModule,
     MatIconModule,
     MatToolbarModule,
     MatSidenavModule,
     MatListModule,
-    MatSliderModule,
     MatInputModule,
+    MatSelectModule,
     MatProgressSpinnerModule,
-    MatAccordion,
-    MatExpansionPanel,
-    MatExpansionPanelHeader,
-    MatExpansionPanelTitle,
-    MatTabGroup,
-    MatTab,
-    MatSidenav,
-    MatDialogModule
+    FormsModule,
+    CommonModule,
   ]
 })
 export class ImageEditorComponent implements OnInit {
@@ -63,27 +51,19 @@ export class ImageEditorComponent implements OnInit {
 
   isDragging = false;
   isRotating = false;
+  isResizing = false;
   dragStartX = 0;
   dragStartY = 0;
   rotationStartAngle = 0;
+  resizeStartWidth = 0;
+  resizeStartHeight = 0;
 
   isLoading = false;
 
-  // canvasPresets: { [key: string]: CanvasPreset[] } = {
-  //   facebook: [
-  //     { name: 'Profile Picture', width: 400, height: 400 },
-  //     { name: 'AD', width: 1200, height: 630 },
-  //     { name: 'Story', width: 1080, height: 1920 },
-  //     { name: 'Post', width: 1200, height: 630 },
-  //     { name: 'Cover', width: 1125, height: 633 }
-  //   ],
-  //   instagram: [
-  //     { name: 'Story', width: 1080, height: 1920 },
-  //     { name: 'Profile Picture', width: 320, height: 320 }
-  //   ]
-  // };
-
-  constructor(private backgroundRemovalService: RemoveBgService, private dialog: MatDialog) { }
+  constructor(
+    private backgroundRemovalService: RemoveBgService,
+    private dialog: MatDialog
+  ) { }
 
   ngOnInit(): void {
     this.ctx = this.canvasRef.nativeElement.getContext('2d')!;
@@ -100,7 +80,7 @@ export class ImageEditorComponent implements OnInit {
 
   openPresetsDialog(): void {
     const dialogRef = this.dialog.open(CanvasPresetsDialogComponent, {
-      width: '250px',
+      width: '300px',
       data: { canvasWidth: this.canvasWidth, canvasHeight: this.canvasHeight }
     });
 
@@ -131,6 +111,9 @@ export class ImageEditorComponent implements OnInit {
 
   addTextLayer(): void {
     const layer = new Layer('text', 'New Text');
+    layer.fontSize = 24;
+    layer.fontFamily = 'Arial';
+    layer.color = '#000000';
     this.addLayer(layer);
   }
 
@@ -178,11 +161,27 @@ export class ImageEditorComponent implements OnInit {
 
   redraw(): void {
     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-    this.layers.forEach(layer => layer.draw(this.ctx));
+    this.layers.forEach(layer => {
+      this.ctx.save();
+      this.ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
+      this.ctx.rotate(layer.rotation * Math.PI / 180);
+      this.ctx.translate(-(layer.x + layer.width / 2), -(layer.y + layer.height / 2));
+      
+      if (layer.type === 'image') {
+        this.ctx.drawImage(layer.content as HTMLImageElement, layer.x, layer.y, layer.width, layer.height);
+      } else if (layer.type === 'text') {
+        this.ctx.font = `${layer.fontSize}px ${layer.fontFamily}`;
+        this.ctx.fillStyle = layer.color;
+        this.ctx.fillText(layer.content as string, layer.x, layer.y + layer.fontSize);
+      }
+      
+      this.ctx.restore();
+    });
     
     if (this.selectedLayer) {
       this.drawSelectionBorder(this.selectedLayer);
       this.drawRotateHandle(this.selectedLayer);
+      this.drawResizeHandle(this.selectedLayer);
     }
   }
 
@@ -190,6 +189,17 @@ export class ImageEditorComponent implements OnInit {
     this.ctx.strokeStyle = '#00f';
     this.ctx.lineWidth = 2;
     this.ctx.strokeRect(layer.x, layer.y, layer.width, layer.height);
+  }
+
+  drawRotateHandle(layer: Layer): void {
+    const handleSize = 10;
+    this.ctx.fillStyle = '#00f';
+    this.ctx.fillRect(
+      layer.x + layer.width / 2 - handleSize / 2,
+      layer.y - handleSize - 5,
+      handleSize,
+      handleSize
+    );
   }
 
   drawResizeHandle(layer: Layer): void {
@@ -245,6 +255,12 @@ export class ImageEditorComponent implements OnInit {
         this.isRotating = true;
         this.rotationStartAngle = Math.atan2(y - (this.selectedLayer.y + this.selectedLayer.height / 2),
                                              x - (this.selectedLayer.x + this.selectedLayer.width / 2));
+      } else if (this.isPointInResizeHandle(x, y, this.selectedLayer)) {
+        this.isResizing = true;
+        this.resizeStartWidth = this.selectedLayer.width;
+        this.resizeStartHeight = this.selectedLayer.height;
+        this.dragStartX = x;
+        this.dragStartY = y;
       } else if (this.isPointInLayer(x, y, this.selectedLayer)) {
         this.isDragging = true;
         this.dragStartX = x - this.selectedLayer.x;
@@ -267,8 +283,28 @@ export class ImageEditorComponent implements OnInit {
       const centerX = this.selectedLayer.x + this.selectedLayer.width / 2;
       const centerY = this.selectedLayer.y + this.selectedLayer.height / 2;
       const angle = Math.atan2(y - centerY, x - centerX);
-      this.selectedLayer.rotation += angle - this.rotationStartAngle;
+      this.selectedLayer.rotation += (angle - this.rotationStartAngle) * (180 / Math.PI);
       this.rotationStartAngle = angle;
+      this.redraw();
+    } else if (this.isResizing && this.selectedLayer) {
+      const dx = x - this.dragStartX;
+      const dy = y - this.dragStartY;
+      const aspectRatio = this.resizeStartWidth / this.resizeStartHeight;
+      
+      if (event.shiftKey) {
+        // Maintain aspect ratio
+        if (Math.abs(dx) > Math.abs(dy)) {
+          this.selectedLayer.width = this.resizeStartWidth + dx;
+          this.selectedLayer.height = this.selectedLayer.width / aspectRatio;
+        } else {
+          this.selectedLayer.height = this.resizeStartHeight + dy;
+          this.selectedLayer.width = this.selectedLayer.height * aspectRatio;
+        }
+      } else {
+        this.selectedLayer.width = this.resizeStartWidth + dx;
+        this.selectedLayer.height = this.resizeStartHeight + dy;
+      }
+      
       this.redraw();
     } else {
       this.updateCursor(x, y);
@@ -277,9 +313,10 @@ export class ImageEditorComponent implements OnInit {
 
   @HostListener('mouseup')
   onMouseUp(): void {
-    if (this.isDragging || this.isRotating) {
+    if (this.isDragging || this.isRotating || this.isResizing) {
       this.isDragging = false;
       this.isRotating = false;
+      this.isResizing = false;
       this.saveState();
     }
   }
@@ -295,14 +332,37 @@ export class ImageEditorComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (this.selectedLayer && event.ctrlKey) {
-      if (event.key === '+' || event.key === '=') {
-        event.preventDefault();
-        this.resizeSelectedLayer(1.1, true);
-      } else if (event.key === '-') {
-        event.preventDefault();
-        this.resizeSelectedLayer(0.9, true);
+    if (this.selectedLayer) {
+      if (event.ctrlKey) {
+        if (event.key === '+' || event.key === '=') {
+          event.preventDefault();
+          this.resizeSelectedLayer(1.1, true);
+        } else if (event.key === '-') {
+          event.preventDefault();
+          this.resizeSelectedLayer(0.9, true);
+        }
+      } else {
+        const moveDistance = event.shiftKey ? 10 : 1;
+        switch (event.key) {
+          case 'ArrowUp':
+            event.preventDefault();
+            this.selectedLayer.y -= moveDistance;
+            break;
+          case 'ArrowDown':
+            event.preventDefault();
+            this.selectedLayer.y += moveDistance;
+            break;
+          case 'ArrowLeft':
+            event.preventDefault();
+            this.selectedLayer.x -= moveDistance;
+            break;
+          case 'ArrowRight':
+            event.preventDefault();
+            this.selectedLayer.x += moveDistance;
+            break;
+        }
       }
+      this.redraw();
     }
   }
 
@@ -322,6 +382,14 @@ export class ImageEditorComponent implements OnInit {
   }
 
   isPointInRotateHandle(x: number, y: number, layer: Layer): boolean {
+    const handleSize = 10;
+    const handleX = layer.x + layer.width / 2 - handleSize / 2;
+    const handleY = layer.y - handleSize - 5;
+    return x >= handleX && x <= handleX + handleSize &&
+           y >= handleY && y <= handleY + handleSize;
+  }
+
+  isPointInResizeHandle(x: number, y: number, layer: Layer): boolean {
     const handleSize = 10;
     return x >= layer.x + layer.width - handleSize &&
            x <= layer.x + layer.width &&
@@ -343,6 +411,8 @@ export class ImageEditorComponent implements OnInit {
         return;
       }
     }
+    this.selectedLayer = null;
+    this.redraw();
   }
 
   @HostListener('click', ['$event'])
@@ -357,15 +427,17 @@ export class ImageEditorComponent implements OnInit {
   }
 
   updateCursor(x: number, y: number): void {
-    if (this.selectedLayer && this.isPointInRotateHandle(x, y, this.selectedLayer)) {
-      this.canvasRef.nativeElement.style.cursor = 'grab';
-    } else {
-      for (let i = this.layers.length - 1; i >= 0; i--) {
-        if (this.isPointInLayer(x, y, this.layers[i])) {
-          this.canvasRef.nativeElement.style.cursor = 'move';
-          return;
-        }
+    if (this.selectedLayer) {
+      if (this.isPointInRotateHandle(x, y, this.selectedLayer)) {
+        this.canvasRef.nativeElement.style.cursor = 'grab';
+      } else if (this.isPointInResizeHandle(x, y, this.selectedLayer)) {
+        this.canvasRef.nativeElement.style.cursor = 'nwse-resize';
+      } else if (this.isPointInLayer(x, y, this.selectedLayer)) {
+        this.canvasRef.nativeElement.style.cursor = 'move';
+      } else {
+        this.canvasRef.nativeElement.style.cursor = 'default';
       }
+    } else {
       this.canvasRef.nativeElement.style.cursor = 'default';
     }
   }
@@ -411,16 +483,4 @@ export class ImageEditorComponent implements OnInit {
     this.canvasRef.nativeElement.height = height;
     this.redraw();
   }
-
-  drawRotateHandle(layer: Layer): void {
-    const handleSize = 10;
-    this.ctx.fillStyle = '#00f';
-    this.ctx.fillRect(
-      layer.x + layer.width - handleSize,
-      layer.y + layer.height - handleSize,
-      handleSize,
-      handleSize
-    );
-  }
-
 }
