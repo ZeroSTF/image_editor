@@ -20,8 +20,6 @@ import { MatToolbarModule } from '@angular/material/toolbar';
   styleUrls: ['./image-editor.component.css'],
   standalone: true,
   imports: [
-    // Include all necessary Material imports here
-    // For example:
     MatButtonModule,
     MatIconModule,
     MatToolbarModule,
