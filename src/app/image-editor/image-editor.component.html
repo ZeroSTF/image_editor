@@ -1,11 +1,17 @@
-<!-- image-editor.component.html -->
-<mat-toolbar color="primary">
-    <span>Image Editor</span>
-  </mat-toolbar>
+<div class="image-editor-container">
+    <mat-toolbar color="primary">
+      <span>Image Editor</span>
+      <span class="spacer"></span>
+      <button mat-icon-button (click)="toggleLayersPanel()" matTooltip="Toggle Layers">
+        <mat-icon>layers</mat-icon>
+      </button>
+      <button mat-icon-button (click)="togglePropertiesPanel()" matTooltip="Toggle Properties">
+        <mat-icon>settings</mat-icon>
+      </button>
+    </mat-toolbar>
   
-  <div class="image-editor-container">
-    <mat-drawer-container class="editor-content">
-      <mat-drawer mode="side" opened>
+    <mat-sidenav-container class="editor-content">
+      <mat-sidenav #layersSidenav mode="side" position="start">
         <mat-nav-list>
           <h3 matSubheader>Layers</h3>
           <mat-list-item *ngFor="let layer of layers" (click)="selectLayer(layer)" [class.selected]="layer === selectedLayer">
@@ -13,81 +19,10 @@
             <span matLine>{{ layer.type === 'image' ? 'Image' : 'Text' }} Layer</span>
           </mat-list-item>
         </mat-nav-list>
-      </mat-drawer>
-      
-      <mat-drawer-content  (click)="onClick($event)">
-        <div class="canvas-container">
-          <canvas #canvas 
-                  [width]="canvasWidth" 
-                  [height]="canvasHeight"
-                  (mousedown)="onMouseDown($event)"
-                  (mousemove)="onMouseMove($event)"
-                  (mouseup)="onMouseUp()"
-                  (wheel)="onWheel($event)"
-                  (click)="onClick($event)"></canvas>
-          <mat-spinner *ngIf="isLoading" diameter="50"></mat-spinner>
-          <!-- <button mat-icon-button matTooltip="Hold Ctrl and use mouse wheel or +/- keys to resize" aria-label="Resize help">
-            <mat-icon>help</mat-icon>
-          </button> -->
-        </div>
-        
-        <div class="toolbar">
-          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" multiple>
-          <button mat-raised-button color="primary" (click)="fileInput.click()">
-            <mat-icon>add_photo_alternate</mat-icon>
-            Add Image
-          </button>
-          <button mat-raised-button color="primary" (click)="addTextLayer()">
-            <mat-icon>text_fields</mat-icon>
-            Add Text
-          </button>
-          <button mat-raised-button color="warn" (click)="removeBackground()" [disabled]="!selectedLayer || selectedLayer.type !== 'image'">
-            <mat-icon>content_cut</mat-icon>
-            Remove Background
-          </button>
-          <button mat-raised-button (click)="undo()" [disabled]="undoStack.length === 0">
-            <mat-icon>undo</mat-icon>
-            Undo
-          </button>
-          <button mat-raised-button (click)="redo()" [disabled]="redoStack.length === 0">
-            <mat-icon>redo</mat-icon>
-            Redo
-          </button>
-          <button mat-raised-button color="accent" (click)="export('png')">
-            <mat-icon>save_alt</mat-icon>
-            Export PNG
-          </button>
-          <button mat-raised-button color="accent" (click)="export('jpeg')">
-            <mat-icon>save_alt</mat-icon>
-            Export JPEG
-          </button>
-        </div>
+      </mat-sidenav>
   
-        <mat-accordion>
-            <mat-expansion-panel>
-              <mat-expansion-panel-header>
-                <mat-panel-title>Canvas Presets</mat-panel-title>
-              </mat-expansion-panel-header>
-              <mat-tab-group>
-                <mat-tab label="Facebook">
-                  <mat-nav-list>
-                    <mat-list-item *ngFor="let preset of canvasPresets['facebook']" (click)="setCanvasSize(preset)">
-                      {{ preset.name }} ({{ preset.width }}x{{ preset.height }})
-                    </mat-list-item>
-                  </mat-nav-list>
-                </mat-tab>
-                <mat-tab label="Instagram">
-                  <mat-nav-list>
-                    <mat-list-item *ngFor="let preset of canvasPresets['instagram']" (click)="setCanvasSize(preset)">
-                      {{ preset.name }} ({{ preset.width }}x{{ preset.height }})
-                    </mat-list-item>
-                  </mat-nav-list>
-                </mat-tab>
-              </mat-tab-group>
-            </mat-expansion-panel>
-          </mat-accordion>
-  
-        <div *ngIf="selectedLayer" class="layer-controls"  (click)="$event.stopPropagation()">
+      <mat-sidenav #propertiesSidenav mode="side" position="end">
+        <div *ngIf="selectedLayer" class="layer-properties">
           <h3>Layer Properties</h3>
           <mat-form-field>
             <mat-label>X</mat-label>
@@ -135,6 +70,51 @@
             <button mat-raised-button color="warn" (click)="deleteLayer()">Delete Layer</button>
           </div>
         </div>
-      </mat-drawer-content>
-    </mat-drawer-container>
+      </mat-sidenav>
+  
+      <mat-sidenav-content>
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+          <canvas #canvas 
+                  [width]="canvasWidth" 
+                  [height]="canvasHeight"
+                  (mousedown)="onMouseDown($event)"
+                  (mousemove)="onMouseMove($event)"
+                  (mouseup)="onMouseUp()"
+                  (wheel)="onWheel($event)"
+                  (click)="onClick($event)"></canvas>
+                </div>
+          <mat-spinner *ngIf="isLoading" diameter="50"></mat-spinner>
+        </div>
+  
+        <div class="floating-toolbar">
+          <input type="file" #fileInput style="display: none" (change)="onFileSelected($event)" multiple>
+          <button mat-mini-fab color="primary" (click)="fileInput.click()" matTooltip="Add Image">
+            <mat-icon>add_photo_alternate</mat-icon>
+          </button>
+          <button mat-mini-fab color="primary" (click)="addTextLayer()" matTooltip="Add Text">
+            <mat-icon>text_fields</mat-icon>
+          </button>
+          <button mat-mini-fab color="warn" (click)="removeBackground()" [disabled]="!selectedLayer || selectedLayer.type !== 'image'" matTooltip="Remove Background">
+            <mat-icon>content_cut</mat-icon>
+          </button>
+          <button mat-mini-fab (click)="undo()" [disabled]="undoStack.length === 0" matTooltip="Undo">
+            <mat-icon>undo</mat-icon>
+          </button>
+          <button mat-mini-fab (click)="redo()" [disabled]="redoStack.length === 0" matTooltip="Redo">
+            <mat-icon>redo</mat-icon>
+          </button>
+          <button mat-mini-fab color="accent" (click)="export('png')" matTooltip="Export PNG">
+            <mat-icon>save_alt</mat-icon>
+          </button>
+          <button mat-mini-fab color="accent" (click)="export('jpeg')" matTooltip="Export JPEG">
+            <mat-icon>save_alt</mat-icon>
+          </button>
+        </div>
+  
+        <button mat-fab class="preset-fab" (click)="openPresetsDialog()" matTooltip="Canvas Presets">
+          <mat-icon>aspect_ratio</mat-icon>
+        </button>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
   </div>

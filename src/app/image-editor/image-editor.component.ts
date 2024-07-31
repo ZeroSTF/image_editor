@@ -10,17 +10,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatAccordion, MatExpansionPanel, MatExpansionPanelHeader, MatExpansionPanelTitle } from '@angular/material/expansion';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { CanvasPresetsDialogComponent } from '../canvas-presets/canvas-presets.component';
 
-interface CanvasPreset {
-  name: string;
-  width: number;
-  height: number;
-}
 
 @Component({
   selector: 'app-image-editor',
@@ -44,11 +41,16 @@ interface CanvasPreset {
     MatExpansionPanelHeader,
     MatExpansionPanelTitle,
     MatTabGroup,
-    MatTab
+    MatTab,
+    MatSidenav,
+    MatDialogModule
   ]
 })
 export class ImageEditorComponent implements OnInit {
   @ViewChild('canvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('layersSidenav') layersSidenav!: MatSidenav;
+  @ViewChild('propertiesSidenav') propertiesSidenav!: MatSidenav;
+
   private ctx!: CanvasRenderingContext2D;
   
   layers: Layer[] = [];
@@ -67,25 +69,46 @@ export class ImageEditorComponent implements OnInit {
 
   isLoading = false;
 
-  canvasPresets: { [key: string]: CanvasPreset[] } = {
-    facebook: [
-      { name: 'Profile Picture', width: 400, height: 400 },
-      { name: 'AD', width: 1200, height: 630 },
-      { name: 'Story', width: 1080, height: 1920 },
-      { name: 'Post', width: 1200, height: 630 },
-      { name: 'Cover', width: 1125, height: 633 }
-    ],
-    instagram: [
-      { name: 'Story', width: 1080, height: 1920 },
-      { name: 'Profile Picture', width: 320, height: 320 }
-    ]
-  };
+  // canvasPresets: { [key: string]: CanvasPreset[] } = {
+  //   facebook: [
+  //     { name: 'Profile Picture', width: 400, height: 400 },
+  //     { name: 'AD', width: 1200, height: 630 },
+  //     { name: 'Story', width: 1080, height: 1920 },
+  //     { name: 'Post', width: 1200, height: 630 },
+  //     { name: 'Cover', width: 1125, height: 633 }
+  //   ],
+  //   instagram: [
+  //     { name: 'Story', width: 1080, height: 1920 },
+  //     { name: 'Profile Picture', width: 320, height: 320 }
+  //   ]
+  // };
 
-  constructor(private backgroundRemovalService: RemoveBgService) { }
+  constructor(private backgroundRemovalService: RemoveBgService, private dialog: MatDialog) { }
 
   ngOnInit(): void {
     this.ctx = this.canvasRef.nativeElement.getContext('2d')!;
     this.redraw();
+  }
+
+  toggleLayersPanel(): void {
+    this.layersSidenav.toggle();
+  }
+
+  togglePropertiesPanel(): void {
+    this.propertiesSidenav.toggle();
+  }
+
+  openPresetsDialog(): void {
+    const dialogRef = this.dialog.open(CanvasPresetsDialogComponent, {
+      width: '250px',
+      data: { canvasWidth: this.canvasWidth, canvasHeight: this.canvasHeight }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.setCanvasSize(result.width, result.height);
+      }
+    });
   }
 
   onFileSelected(event: Event): void {
@@ -120,6 +143,7 @@ export class ImageEditorComponent implements OnInit {
 
   selectLayer(layer: Layer): void {
     this.selectedLayer = layer;
+    this.propertiesSidenav.open();
   }
 
   updateLayerProperty(property: string, value: any): void {
@@ -154,19 +178,7 @@ export class ImageEditorComponent implements OnInit {
 
   redraw(): void {
     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-    this.layers.forEach(layer => {
-      this.ctx.save();
-      this.ctx.translate(layer.x + layer.width / 2, layer.y + layer.height / 2);
-      this.ctx.rotate(layer.rotation);
-      if (layer.type === 'image') {
-        this.ctx.drawImage(layer.content as HTMLImageElement, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
-      } else {
-        this.ctx.font = `${layer.fontSize}px ${layer.fontFamily}`;
-        this.ctx.fillStyle = layer.color;
-        this.ctx.fillText(layer.content as string, -layer.width / 2, -layer.height / 2);
-      }
-      this.ctx.restore();
-    });
+    this.layers.forEach(layer => layer.draw(this.ctx));
     
     if (this.selectedLayer) {
       this.drawSelectionBorder(this.selectedLayer);
@@ -326,26 +338,23 @@ export class ImageEditorComponent implements OnInit {
     for (let i = this.layers.length - 1; i >= 0; i--) {
       if (this.isPointInLayer(x, y, this.layers[i])) {
         this.selectedLayer = this.layers[i];
+        this.propertiesSidenav.open();
         this.redraw();
         return;
       }
     }
-    // If no layer was clicked, we don't change the selection
-    // this.selectedLayer = null;  // Remove or comment out this line
   }
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent): void {
-  const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  
-  // Check if the click is inside the canvas
-  if (x >= 0 && x <= this.canvasWidth && y >= 0 && y <= this.canvasHeight) {
-    this.selectLayerAtPoint(x, y);
+    const rect = this.canvasRef.nativeElement.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    if (x >= 0 && x <= this.canvasWidth && y >= 0 && y <= this.canvasHeight) {
+      this.selectLayerAtPoint(x, y);
+    }
   }
-  // If the click is outside the canvas, we don't change the selection
-}
 
   updateCursor(x: number, y: number): void {
     if (this.selectedLayer && this.isPointInRotateHandle(x, y, this.selectedLayer)) {
@@ -389,18 +398,17 @@ export class ImageEditorComponent implements OnInit {
           (error) => {
             console.error('Background removal failed:', error);
             this.isLoading = false;
-            // Handle error (e.g., show a message to the user)
           }
         );
       }
     }, 'image/png');
   }
 
-  setCanvasSize(preset: CanvasPreset): void {
-    this.canvasWidth = preset.width;
-    this.canvasHeight = preset.height;
-    this.canvasRef.nativeElement.width = this.canvasWidth;
-    this.canvasRef.nativeElement.height = this.canvasHeight;
+  setCanvasSize(width: number, height: number): void {
+    this.canvasWidth = width;
+    this.canvasHeight = height;
+    this.canvasRef.nativeElement.width = width;
+    this.canvasRef.nativeElement.height = height;
     this.redraw();
   }
 
